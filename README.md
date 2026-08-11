@@ -27,7 +27,7 @@ O pipeline entrega:
   `docs/architecture.md`), que abre Merge Requests automáticos para revisão humana.
 - Observabilidade básica via Prometheus, Grafana e syslog centralizado.
 
-## O que é contribuição original vs. o que é infraestrutura de terceiros
+## Reivindicação vs. o que é infraestrutura de terceiros
 
 Todos os módulos individuais usados (GitLab CE, NetBox, Terraform, Ansible, NAPALM, ncclient,
 Prometheus, Grafana etc.) são projetos open source de terceiros. A contribuição documentada
