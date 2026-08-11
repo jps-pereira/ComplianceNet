@@ -21,9 +21,8 @@ próprio equipamento.
 | 3 — Aprovação humana | Review obrigatório antes do merge |
 | 4 — CD dry-run | Diff exibido sem aplicar (NETCONF get-config ou NAPALM dry-run) |
 | 5 — CD apply | NAPALM/NETCONF conecta no equipamento real e aplica com commit-confirm |
-| 6 — Ansible orquestra deploy na ordem core → distribution → access | |
-| 7 — Backup | Coleta periódica de `running-config` via NETCONF, versionada em Git |
-| 8 — Rollback | Se falhar: commit-confirm reverte automaticamente; Git tag / Terraform state restauram IaC |
+| 6 — Backup | Coleta periódica de `running-config` via NETCONF, versionada em Git |
+| 7 — Rollback | Se falhar: commit-confirm reverte automaticamente; Git tag / Terraform state restauram IaC |
 
 ## Stack de ferramentas (100% open source, de terceiros)
 
