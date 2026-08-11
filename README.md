@@ -5,6 +5,9 @@
 > privada em que ela foi originalmente implantada. IPs, hostnames, credenciais e demais dados
 > específicos do ambiente de produção foram removidos ou substituídos por placeholders/templates.
 
+# Selos Considerados
+Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação.
+
 ## O que é o ComplianceNet
 
 O ComplianceNet é um pipeline de CI/CD para gestão de configuração de redes *Out-of-Band* (OOB)
