@@ -1,0 +1,124 @@
+stages:
+  - sync         # sincroniza NetBox -> host_vars
+  - validate
+  - dry-run
+  - deploy
+  - backup
+  - drift-detect
+
+default:
+  tags:
+    - oob
+  before_script:
+    - source /opt/netauto/bin/activate
+
+# ── STAGE: sync ─────────────────────────────────────────────────────────
+netbox-sync:
+  stage: sync
+  script:
+    - python3 library/netbox_sync.py
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  variables:
+    NETBOX_URL: $NETBOX_URL
+    NETBOX_TOKEN: $NETBOX_TOKEN
+    REPO_PATH: "."
+
+# ── STAGE: validate ─────────────────────────────────────────────────────
+yaml-lint:
+  stage: validate
+  script:
+    - yamllint -c .yamllint.yml inventory/ host_vars/ playbooks/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+ansible-lint:
+  stage: validate
+  script:
+    - ansible-lint playbooks/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+terraform-validate:
+  stage: validate
+  script:
+    - cd terraform/environments/core
+    - terraform init -backend=false
+    - terraform validate
+    - terraform fmt -check
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - changes:
+        - terraform/**/*
+
+netconf-validate:
+  stage: validate
+  script:
+    - find netconf/ -name '*.xml' -exec xmllint --noout {} \;
+    - find netconf/ -name '*.yang' -exec pyang --path /opt/yang-models {} \;
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# ── STAGE: dry-run ──────────────────────────────────────────────────────
+ansible-dry-run:
+  stage: dry-run
+  script:
+    - ansible-playbook playbooks/dry_run.yml -i inventory/hosts.yml
+  environment:
+    name: dry-run
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ── STAGE: deploy ───────────────────────────────────────────────────────
+terraform-apply:
+  stage: deploy
+  script:
+    - cd terraform/environments/core
+    - terraform init
+    - terraform apply -auto-approve
+  environment:
+    name: production
+  when: manual
+  only:
+    - main
+
+ansible-deploy:
+  stage: deploy
+  script:
+    - ansible-playbook playbooks/deploy.yml -i inventory/hosts.yml
+  environment:
+    name: production
+  when: manual
+  only:
+    - main
+  needs: [terraform-apply]
+
+# ── STAGE: backup ───────────────────────────────────────────────────────
+netconf-backup:
+  stage: backup
+  script:
+    - python3 library/backup.py
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# ── STAGE: drift-detect ─────────────────────────────────────────────────
+drift-detect:
+  stage: drift-detect
+  image: python:3.11-slim
+  before_script:
+    - pip install napalm ntc-templates pyyaml requests ncclient --quiet
+    - git config user.email 'drift-bot@compliancenet.local'
+    - git config user.name 'Drift Bot'
+    - git remote set-url origin "https://drift-bot:${DRIFT_BOT_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+  script:
+    - python library/run_drift_check.py
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $DRIFT_TRIGGER == "webhook"'
+  artifacts:
+    paths:
+      - drift-report.json
+    when: always

@@ -1,0 +1,50 @@
+---
+# dry_run.yml -- exibe o diff sem aplicar. O protocolo (NETCONF ou CLI) e
+# decidido pelo dispatch engine (library/dispatch.py), consultando o
+# custom field 'netconf_enabled' de cada device no NetBox.
+- name: Dry-run — exibir diff sem aplicar
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Consultar protocolo no NetBox (dispatch)
+      set_fact:
+        transport: "{{ lookup('pipe', 'python3 library/dispatch.py ' + inventory_hostname + ' ' + netbox_url + ' ' + netbox_token) }}"
+
+    # ── Caminho principal: NETCONF ──────────────────────────────────────
+    - name: NETCONF dry-run — get-config atual
+      ansible.netcommon.netconf_get:
+        host: "{{ ansible_host }}"
+        username: "{{ netconf_username }}"
+        password: "{{ netconf_password }}"
+        port: 830
+        filter: '<filter type="subtree"><interfaces xmlns="{{ yang_namespace_interfaces }}"/></filter>'
+      register: current_config
+      when: transport == 'netconf'
+
+    - name: NETCONF dry-run — exibir diff
+      debug:
+        msg: "{{ current_config.output | to_nice_yaml }}"
+      when: transport == 'netconf'
+
+    # ── Fallback: Jinja2 + CLI (netconf_enabled=false) ──────────────────
+    - name: CLI fallback — gerar config do template Jinja2
+      template:
+        src: "templates/{{ ansible_network_os }}/interface.j2"
+        dest: "/tmp/configs/{{ inventory_hostname }}.cfg"
+      when: transport == 'cli'
+
+    - name: CLI fallback — NAPALM dry-run
+      napalm_install_config:
+        hostname: "{{ ansible_host }}"
+        username: "{{ napalm_username }}"
+        password: "{{ napalm_password }}"
+        dev_os: "{{ napalm_driver }}"
+        config_file: "/tmp/configs/{{ inventory_hostname }}.cfg"
+        commit_changes: false
+      register: dry_run_result
+      when: transport == 'cli'
+
+    - name: CLI fallback — exibir diff
+      debug:
+        msg: "{{ dry_run_result.diff }}"
+      when: transport == 'cli'

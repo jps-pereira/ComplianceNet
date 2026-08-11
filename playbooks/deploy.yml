@@ -1,0 +1,9 @@
+---
+# deploy.yml -- aplica a configuracao dispositivo a dispositivo (serial: 1)
+# para garantir consistencia na ordem core -> distribution -> access.
+- name: Deploy — site a site
+  hosts: all
+  serial: 1
+  gather_facts: false
+  tasks:
+    - import_tasks: tasks/deploy_config.yml

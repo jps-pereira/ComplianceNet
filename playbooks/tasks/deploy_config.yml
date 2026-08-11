@@ -1,0 +1,52 @@
+---
+# tasks/deploy_config.yml -- aplica NETCONF (padrao) ou Jinja2/CLI
+# (fallback), com commit-confirm e rollback automatico em caso de perda de
+# conectividade. O payload NETCONF real fica em netconf/<vendor>/*.xml.
+- name: Consultar protocolo no NetBox via dispatch
+  set_fact:
+    transport: "{{ lookup('pipe', 'python3 library/dispatch.py ' + inventory_hostname + ' ' + netbox_url + ' ' + netbox_token) }}"
+
+- name: NETCONF — aplicar payload XML com commit-confirm
+  ansible.netcommon.netconf_config:
+    host: "{{ ansible_host }}"
+    username: "{{ netconf_username }}"
+    password: "{{ netconf_password }}"
+    port: 830
+    hostkey_verify: false
+    lock: true
+    save: true
+    content: "{{ lookup('file', netconf_payload_path) }}"
+  when: transport == 'netconf'
+
+- name: NETCONF — verificar conectividade pos-deploy
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 830
+    timeout: 60
+  when: transport == 'netconf'
+
+# ── Fallback: Jinja2 + CLI (netconf_enabled=false) ──────────────────────
+- name: CLI fallback — gerar config do template Jinja2
+  template:
+    src: "templates/{{ ansible_network_os }}/interface.j2"
+    dest: "/tmp/configs/{{ inventory_hostname }}.cfg"
+  when: transport == 'cli'
+
+- name: CLI fallback — NAPALM commit-confirm
+  napalm_install_config:
+    hostname: "{{ ansible_host }}"
+    username: "{{ napalm_username }}"
+    password: "{{ napalm_password }}"
+    dev_os: "{{ napalm_driver }}"
+    config_file: "/tmp/configs/{{ inventory_hostname }}.cfg"
+    commit_changes: true
+  when: transport == 'cli'
+
+- name: CLI fallback — rollback se perder conectividade
+  napalm_install_config:
+    hostname: "{{ ansible_host }}"
+    username: "{{ napalm_username }}"
+    password: "{{ napalm_password }}"
+    dev_os: "{{ napalm_driver }}"
+    rollback: true
+  when: transport == 'cli' and connectivity_check.failed

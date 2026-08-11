@@ -1,0 +1,9 @@
+.env
+*.pyc
+__pycache__/
+.terraform/
+*.tfstate
+*.tfstate.backup
+/tmp/
+host_vars/*.yaml
+!host_vars/.gitkeep
