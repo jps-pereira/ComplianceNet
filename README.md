@@ -6,7 +6,7 @@
 > específicos do ambiente de produção foram removidos ou substituídos por placeholders/templates.
 
 # Selos Considerados
-Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação.
+Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação. A estrutura desse diretório e a não reprodutibilidade da ferramenta se dão pela modalidade escolhida de código fechado, e também pelo própria natureza da ferramenta ser implementada de forma modularizada em servidor dedicado.
 
 ## O que é o ComplianceNet
 
@@ -95,6 +95,6 @@ dependências (GitLab CE, NetBox, Terraform, Ansible, NAPALM etc.) mantêm suas 
 
 ## Status
 
-Artefato de pesquisa referente a um MVP validado em ambiente de laboratório (ContainerLab, Nokia
+Artefato de pesquisa referente a um MVP validado (ContainerLab, Nokia
 SR Linux) e, parcialmente, em produção. Consulte `docs/architecture.md`, seção de limitações
-conhecidas, para o escopo ainda não coberto (ex.: BGP e ACLs no motor de diff semântico).
+conhecidas, para o escopo ainda não coberto.
