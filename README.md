@@ -90,7 +90,7 @@ compliancenet/
 
 ## Licença
 
-100% open source. Este repositório é distribuído sob a licença Apache 2.0 (ver `LICENSE`). As
+Este repositório é distribuído sob a licença Apache 2.0 (ver `LICENSE`). As
 dependências (GitLab CE, NetBox, Terraform, Ansible, NAPALM etc.) mantêm suas próprias licenças.
 
 ## Status
