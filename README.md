@@ -33,7 +33,7 @@ esses módulos** e formam o pipeline proposto:
 
 | Camada | Contribuição original (neste repo) |
 |---|---|
-| Sincronização de inventário | `library/netbox_sync.py` — gera `host_vars/` a partir do NetBox e abre MR automático |
+| Sincronização de inventário | `library/netbox_sync.py` — gera `host_vars/` a partir do NetBox|
 | Backup | `library/backup.py` — coleta `running-config` via NETCONF e versiona em Git |
 | Detecção de drift | `library/drift_collector.py`, `drift_detector.py`, `config_parser.py` |
 | Diff NETCONF Based | `library/sksd/` — alinhamento por chave de esquema YANG, evita falso-positivo por reordenação |
