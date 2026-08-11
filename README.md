@@ -61,7 +61,7 @@ compliancenet/
 ├── README.md
 ├── LICENSE
 ├── docs/
-│   ├── architecture.md       # desenho do pipeline, stack, SKSD, dispatch engine
+│   ├── architecture.md       # desenho do pipeline, stack, dispatch engine...
 │   └── deployment.md         # pré-requisitos e passos de implantação (generalizados)
 ├── config/templates/         # exemplos de configuração — nunca valores reais
 │   └── .env.example
