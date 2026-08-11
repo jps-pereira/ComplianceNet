@@ -43,7 +43,6 @@ na porta 830 e não requer QEMU/vrnetlab.
 4. **NetBox** — CMDB/IPAM, fonte da verdade do inventário.
 5. **MinIO** — backend S3-compatível para o remote state do Terraform.
 6. **(Opcional) ContainerLab** — laboratório virtual para desenvolvimento sem hardware físico.
-7. **Prometheus + Grafana + syslog-ng** — observabilidade.
 
 Consulte a documentação oficial de cada projeto para os passos de instalação detalhados; os
 arquivos em `config/templates/` deste repositório fornecem exemplos de configuração já adaptados
