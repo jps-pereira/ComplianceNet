@@ -36,14 +36,6 @@ próprio equipamento.
 | Lint / validação | yamllint, ansible-lint, pyang |
 | Orquestração de deploy | Ansible |
 | Abstração multi-vendor | NAPALM, ncclient (NETCONF), Netmiko (fallback SSH/CLI) |
-| Observabilidade | Prometheus, Grafana, syslog-ng |
-
-## Dispatch engine — decisão de protocolo
-
-O módulo `library/dispatch.py` consulta o campo `custom_fields.netconf_enabled` de cada device no
-NetBox e decide, de forma transparente ao operador, se o deploy usa NETCONF (caminho principal)
-ou Jinja2/CLI via NAPALM (fallback). O operador nunca precisa saber qual caminho foi usado: ele
-edita YAML em `host_vars/`, abre o MR, aprova o dry-run e dispara o deploy.
 
 ## Sincronização de inventário (NetBox → Git)
 
@@ -62,7 +54,7 @@ desejado** (o que está declarado em `host_vars/`) — um device pode ter config
 expressa como intenção no Git. O módulo de detecção de drift existe justamente para fechar essa
 lacuna.
 
-## Detecção de drift e SKSD (Schema-Keyed Semantic Diff)
+## Detecção de drift
 
 Quando alguém aplica uma mudança diretamente em um equipamento (fora do pipeline), o job
 `drift-detect` (agendado ou disparado por webhook) coleta a config real via NETCONF
@@ -86,7 +78,7 @@ Cada operação de diff recebe um peso de risco (0–100) por casamento de prefi
 uma tabela indexada pelo caminho normalizado do esquema (`library/sksd/risk.py`), determinando
 prioridade e número de revisores exigidos no MR — nunca se o MR é necessário ou não.
 
-### Limitações conhecidas do SKSD
+### Limitações conhecidas
 
 - `SCHEMA_KEYS` é escrito manualmente por vendor; não há descoberta automática de chaves a partir
   do módulo `.yang` — item de trabalho futuro.
