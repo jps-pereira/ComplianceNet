@@ -10,38 +10,34 @@ Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliaçã
 
 ## O que é o ComplianceNet
 
-O ComplianceNet é um pipeline de CI/CD para gestão de configuração de redes *Out-of-Band* (OOB)
-multi-vendor. Ele resolve um problema comum em operação de rede: mudanças de configuração
+O ComplianceNet é um pipeline de CI/CD para gestão de configuração de redes.multi-vendor. 
+Ele resolve um problema comum em operação de rede: mudanças de configuração
 aplicadas manualmente via SSH, sem validação prévia, sem histórico estruturado e sem rollback
-automático — o que gera drift de configuração, indisponibilidade por erro humano e ausência de
-governança.
+automático, indisponibilidade por erro humano e ausência de governança. Ao resolver esse problema com uma
+plataforma CI/CD, suge o problema de drift de configuração, que é a reivindicação principal da ferramenta.
 
 O pipeline entrega:
 
 - Controle de versão centralizado de configurações por dispositivo, grupo e camada de rede (Git).
 - Validação sintática e de esquema (YANG) antes de qualquer mudança chegar ao equipamento.
-- Deploy ordenado e controlado (core → distribution → access) com dry-run e commit-confirm.
-- Rollback automático em caso de falha (NAPALM commit-confirm, Git tags, Terraform state).
+- Deploy ordenado e controlado com dry-run e commit-confirm.
 - Backup automatizado de configurações versionado em Git.
-- Detecção de drift de configuração com um motor de diff semântico próprio (SKSD — ver
-  `docs/architecture.md`), que abre Merge Requests automáticos para revisão humana.
-- Observabilidade básica via Prometheus, Grafana e syslog centralizado.
+- Detecção de drift de configuração baseado em esqumas NETCONF/YANG `docs/architecture.md`, 
+  que abre Merge Requests automáticos para revisão humana.
 
 ## Reivindicação vs. o que é infraestrutura de terceiros
 
-Todos os módulos individuais usados (GitLab CE, NetBox, Terraform, Ansible, NAPALM, ncclient,
-Prometheus, Grafana etc.) são projetos open source de terceiros. A contribuição documentada
-neste repositório está nos **scripts de integração, configurações e mecanismos que conectam
+Todos os módulos individuais usados (GitLab CE, NetBox, Terraform, Ansible, NAPALM, ncclient) são projetos open source de terceiros. 
+A contribuição documentada neste repositório está nos **scripts de integração, configurações e mecanismos que conectam
 esses módulos** e formam o pipeline proposto:
 
 | Camada | Contribuição original (neste repo) |
 |---|---|
-| Roteamento de protocolo | `library/dispatch.py` — decide NETCONF vs. CLI por device, consultando o NetBox |
 | Sincronização de inventário | `library/netbox_sync.py` — gera `host_vars/` a partir do NetBox e abre MR automático |
 | Backup | `library/backup.py` — coleta `running-config` via NETCONF e versiona em Git |
 | Detecção de drift | `library/drift_collector.py`, `drift_detector.py`, `config_parser.py` |
-| Diff semântico (SKSD) | `library/sksd/` — alinhamento por chave de esquema YANG, evita falso-positivo por reordenação |
-| Orquestração de deploy | `playbooks/` — dry-run e deploy com Ansible, protocolo decidido pelo dispatch engine |
+| Diff NETCONF Based | `library/sksd/` — alinhamento por chave de esquema YANG, evita falso-positivo por reordenação |
+| Orquestração de deploy | `playbooks/` — dry-run e deploy com Ansible|
 | Pipeline | `pipeline/.gitlab-ci.yml` — stages de validação, dry-run, deploy, backup e drift-detect |
 
 Consulte `docs/architecture.md` para o desenho completo e `docs/deployment.md` para os requisitos
