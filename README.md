@@ -82,7 +82,7 @@ compliancenet/
     ├── drift_collector.py
     ├── drift_detector.py
     ├── config_parser.py
-    └── sksd/
+    └── metodo_Netconf/
         ├── ir_diff.py
         ├── risk.py
         └── scheduler.py
