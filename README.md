@@ -10,41 +10,34 @@ Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliaçã
 
 # Preocupações com segurança
 
-O código-fonte deste projeto — pipeline CI/CD e o módulo de diff — **não é disponibilizado** neste artefato. A ferramenta está integrada a uma infraestrutura de rede em produção: dez dispositivos de rede reais, uma instância de GitLab self-hosted sem TLS, integração com NetBox/Terraform, e credenciais operacionais de acesso aos equipamentos. A divulgação do código completo, mesmo com anonimização, exporia detalhes de topologia e práticas operacionais dessa rede.
+O código-fonte deste projeto, pipeline CI/CD e o módulo de diff, **não é disponibilizado** neste artefato. A ferramenta está integrada a uma infraestrutura de rede em produção: dez dispositivos com configurações privadas reais, uma instância de GitLab self-hosted sem TLS, integração com NetBox/Terraform, e credenciais operacionais de acesso aos equipamentos. A divulgação do código completo, mesmo com alguma anonimização, exporia detalhes de topologia e práticas operacionais dessa rede.
 
-Como consequência, **não há execução de código pelo avaliador em nenhuma etapa** — logo, não há risco de segurança a ser mitigado, pois nada roda no ambiente do revisor. A avaliação deste artefato se baseia inteiramente na documentação dos processos e dos resultados experimentais apresentados abaixo, e não na execução direta da ferramenta.
+Como consequência, **não há execução de código pelo avaliador** logo, não há risco de segurança a ser mitigado, pois nada roda no ambiente do revisor. A avaliação deste artefato se baseia inteiramente na documentação dos processos e dos resultados experimentais apresentados abaixo.
 
 # Instalação
 
 Não há pacote instalável fornecido aos avaliadores. Esta seção documenta, para fins de transparência sobre o ambiente em que a ferramenta foi de fato construída e testada, os componentes envolvidos:
 
-- **Módulo ComplianceNet**: Python 3.x, apenas biblioteca padrão (sem dependências externas) — seis módulos internos (`ir_diff.py`, `risk.py`, `baselines.py`, `terraform_style_baseline.py`, `ospf_tree_adapter.py`, `xml_adapter.py`).
+- **Módulo ComplianceNet**: Python 3.x
 - **Pipeline**: GitLab CI/CD (self-hosted, HTTP interno), ContainerLab para simulação de topologia (Nokia SR Linux), NETCONF/ncclient para coleta e aplicação de configuração, NetBox como fonte de verdade de inventário via Terraform.
-- **Ambiente de validação real**: 10 dispositivos de rede de uma topologia OOB real (8x agregação, 1x core, 1x laboratório), usados nos experimentos descritos abaixo.
-
-Essa descrição serve apenas para contextualizar os resultados relatados no artigo — não constitui um roteiro de instalação reproduzível pelo avaliador.
+- **Ambiente de validação real**: 10 dispositivos de rede de uma topologia real (8x agregação, 1x core, 1x laboratório), usados nos experimentos descritos abaixo.
+Essa descrição serve apenas para contextualizar os resultados relatados no artigo, não constitui um roteiro de instalação reproduzível pelo avaliador.
 
 # Teste mínimo
 
 Não é oferecido um teste mínimo executável pelo avaliador, pela mesma razão exposta acima: o código não é distribuído. Em vez disso, descrevemos aqui o comportamento observável da ferramenta, tal como testado pelos autores, para dar ao avaliador uma noção concreta da funcionalidade sem exigir execução:
 
-Ao rodar o SKSD sobre duas capturas de configuração de um mesmo dispositivo — uma servindo de baseline e outra com a lista de interfaces reordenada mas sem nenhuma mudança de conteúdo — o SKSD reporta corretamente **zero drift**, pois o algoritmo indexa listas pela chave semântica do schema YANG (ex: nome da interface), não pela posição. Esse é o comportamento mínimo que diferencia o SKSD de uma ferramenta de diff textual ou posicional, e foi verificado manualmente pelos autores contra os 10 dispositivos reais do laboratório, sem nenhum falso-positivo.
+Ao rodar o fluxo pricipal na ferramenta, sobre duas capturas de configuração de um mesmo dispositivo, uma servindo de baseline e outra com a lista de interfaces reordenada mas sem nenhuma mudança de conteúdo, o método reporta corretamente ausência de drift, pois o algoritmo indexa listas pela chave do schema YANG, não pela posição. Esse é o comportamento mínimo que diferencia a ferramenta proposta de uma ferramenta de diff textual ou posicional.
 
 # Experimentos
 
-Esta seção documenta as principais reivindicações do artigo e os resultados efetivamente obtidos pelos autores. Como o código não é disponibilizado, o avaliador não poderá reexecutar os experimentos — o objetivo aqui é apresentar a metodologia com detalhe suficiente para que a reivindicação seja auditável por inspeção (isto é, para que o avaliador julgue a plausibilidade e o rigor do experimento a partir da descrição, mesmo sem rodar o código).
+Esta seção documenta as principais reivindicações do artigo e os resultados efetivamente obtidos pelos autores. Como o código não é disponibilizado, o avaliador não poderá reexecutar os experimentos, o objetivo aqui é apresentar a metodologia com detalhe suficiente para que a reivindicação seja auditável por inspeção, ou seja, para que o avaliador julgue a plausibilidade partir da descrição, mesmo sem rodar o código.
 
 ## Reivindicação #1 — ComplianceNet elimina falsos-positivos em reordenação de listas, ao contrário das baselines
 
-**Metodologia:** os autores definiram 4 cenários de drift — (i) reordenação da lista de interfaces OSPF sem mudança de conteúdo, (ii) mudança de um valor escalar (router-id), (iii) cenário de controle sem nenhuma mudança, (iv) mudança de admin-state de uma interface. Cada cenário foi executado contra os 10 dispositivos reais do laboratório, comparando 4 métodos de diff: SKSD, Naive-dict, Text-diff e Terraform-style. As perturbações sintéticas (mudança de router-id, inversão de admin-state) foram aplicadas sobre cópias em memória da configuração observada — nunca no equipamento real — técnica também usada e divulgada no cenário de reordenação original.
+**Metodologia:** os autores definiram 4 cenários de drift — (i) reordenação da lista de interfaces OSPF sem mudança de conteúdo, (ii) mudança de um valor escalar (router-id), (iii) cenário de controle sem nenhuma mudança, (iv) mudança de admin-state de uma interface. Cada cenário foi executado contra os 10 dispositivos reais do laboratório, comparando 4 métodos de diff: ComplianceNet, Naive-dict, Text-diff e Terraform-style. As perturbações sintéticas (mudança de router-id, inversão de admin-state) foram aplicadas sobre cópias em memória da configuração observada, técnica também usada e divulgada no cenário de reordenação original.
 
-**Resultado obtido:** o ComplianceNet acertou 100% dos casos nos 4 cenários. As 3 baselines acertaram 100% nos cenários (ii), (iii) e (iv), mas falharam completamente (0% de acerto, ou seja, reportaram falso-positivo de drift) no cenário (i) de reordenação — exatamente o caso que o SKSD foi desenhado para tratar corretamente. A comparação foi desenhada para ser justa: as baselines não perdem em todos os cenários, só no que expõe sua limitação estrutural (comparação posicional).
-
-## Reivindicação #2 — A vantagem do ComplianceNet desempenho e corretude
-
-**Metodologia:** medição de tempo isolada à função de comparação de cada método (excluindo o tempo de coleta via NETCONF), com 30 repetições × 10 dispositivos = 300 amostras por célula (4.800 amostras no total, cobrindo os 4 cenários × 4 métodos), agregadas com intervalo de confiança via distribuição t de Student.
-
-**Resultado obtido:** o ComplianceNet **não** é o método mais rápido — o Terraform-style geralmente venceu em tempo de execução, e o Text-diff foi consistentemente o mais lento dos 4 (por serializar para JSON antes de comparar). Um outlier foi identificado e investigado: a célula Terraform-style/mudança-de-router-id apresentou um intervalo de confiança 5x mais largo que o esperado; isolando a causa, tratava-se de uma única amostra de 2,92ms (entre 300) atribuída a uma interrupção do sistema operacional em um dispositivo específico — ao remover esse outlier, a célula ficou consistente com a célula equivalente do cenário de reordenação, confirmando que não é um comportamento do algoritmo. Os autores reportam esse resultado de forma direta no artigo: o argumento em favor do SKSD é sobre corretude semântica, não sobre velocidade.
+**Resultado obtido:** o ComplianceNet acertou 100% dos casos nos 4 cenários. As 3 baselines acertaram 100% nos cenários (ii), (iii) e (iv), mas falharam completamente (0% de acerto, ou seja, reportaram falso-positivo de drift) no cenário (i) de reordenação. A comparação foi desenhada para ser justa, as baselines não perdem em todos os cenários, só no que expõe sua limitação estrutural.
 
 ## O que é o ComplianceNet
 
