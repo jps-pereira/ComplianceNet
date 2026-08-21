@@ -18,7 +18,7 @@ Como consequência, **não há execução de código pelo avaliador em nenhuma e
 
 Não há pacote instalável fornecido aos avaliadores. Esta seção documenta, para fins de transparência sobre o ambiente em que a ferramenta foi de fato construída e testada, os componentes envolvidos:
 
-- **Módulo SKSD**: Python 3.x, apenas biblioteca padrão (sem dependências externas) — seis módulos internos (`ir_diff.py`, `risk.py`, `baselines.py`, `terraform_style_baseline.py`, `ospf_tree_adapter.py`, `xml_adapter.py`).
+- **Módulo ComplianceNet**: Python 3.x, apenas biblioteca padrão (sem dependências externas) — seis módulos internos (`ir_diff.py`, `risk.py`, `baselines.py`, `terraform_style_baseline.py`, `ospf_tree_adapter.py`, `xml_adapter.py`).
 - **Pipeline**: GitLab CI/CD (self-hosted, HTTP interno), ContainerLab para simulação de topologia (Nokia SR Linux), NETCONF/ncclient para coleta e aplicação de configuração, NetBox como fonte de verdade de inventário via Terraform.
 - **Ambiente de validação real**: 10 dispositivos de rede de uma topologia OOB real (8x agregação, 1x core, 1x laboratório), usados nos experimentos descritos abaixo.
 
@@ -34,13 +34,13 @@ Ao rodar o SKSD sobre duas capturas de configuração de um mesmo dispositivo �
 
 Esta seção documenta as principais reivindicações do artigo e os resultados efetivamente obtidos pelos autores. Como o código não é disponibilizado, o avaliador não poderá reexecutar os experimentos — o objetivo aqui é apresentar a metodologia com detalhe suficiente para que a reivindicação seja auditável por inspeção (isto é, para que o avaliador julgue a plausibilidade e o rigor do experimento a partir da descrição, mesmo sem rodar o código).
 
-## Reivindicação #1 — SKSD elimina falsos-positivos em reordenação de listas, ao contrário das baselines
+## Reivindicação #1 — ComplianceNet elimina falsos-positivos em reordenação de listas, ao contrário das baselines
 
 **Metodologia:** os autores definiram 4 cenários de drift — (i) reordenação da lista de interfaces OSPF sem mudança de conteúdo, (ii) mudança de um valor escalar (router-id), (iii) cenário de controle sem nenhuma mudança, (iv) mudança de admin-state de uma interface. Cada cenário foi executado contra os 10 dispositivos reais do laboratório, comparando 4 métodos de diff: SKSD, Naive-dict, Text-diff e Terraform-style. As perturbações sintéticas (mudança de router-id, inversão de admin-state) foram aplicadas sobre cópias em memória da configuração observada — nunca no equipamento real — técnica também usada e divulgada no cenário de reordenação original.
 
 **Resultado obtido:** o SKSD acertou 100% dos casos nos 4 cenários. As 3 baselines acertaram 100% nos cenários (ii), (iii) e (iv), mas falharam completamente (0% de acerto, ou seja, reportaram falso-positivo de drift) no cenário (i) de reordenação — exatamente o caso que o SKSD foi desenhado para tratar corretamente. A comparação foi desenhada para ser justa: as baselines não perdem em todos os cenários, só no que expõe sua limitação estrutural (comparação posicional).
 
-## Reivindicação #2 — A vantagem do SKSD é de corretude, não de desempenho
+## Reivindicação #2 — A vantagem do ComplianceNet desempenho e corretude
 
 **Metodologia:** medição de tempo isolada à função de comparação de cada método (excluindo o tempo de coleta via NETCONF), com 30 repetições × 10 dispositivos = 300 amostras por célula (4.800 amostras no total, cobrindo os 4 cenários × 4 métodos), agregadas com intervalo de confiança via distribuição t de Student.
 
