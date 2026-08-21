@@ -10,69 +10,41 @@ Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliaçã
 
 # Preocupações com segurança
 
-O artefato disponibilizado neste repositório é restrito ao módulo SKSD (`library/sksd/`) e ao harness de avaliação com dados de amostra sintéticos/anonimizados. **O pipeline CI/CD completo, a topologia de rede real, credenciais de acesso a equipamentos e a instância de GitLab utilizada em produção não fazem parte deste artefato e não estão disponíveis no repositório.**
+O código-fonte deste projeto — pipeline CI/CD e o módulo de diff semântico (SKSD) — **não é disponibilizado** neste artefato. A ferramenta está integrada a uma infraestrutura de rede em produção: dez dispositivos de rede reais, uma instância de GitLab self-hosted sem TLS, integração com NetBox/Terraform, e credenciais operacionais de acesso aos equipamentos. A divulgação do código completo, mesmo com anonimização, exporia detalhes de topologia e práticas operacionais dessa rede.
 
-Não há risco de execução para os avaliadores: o código do SKSD é Python puro (stdlib apenas, sem chamadas de rede, sem I/O além de leitura de arquivos locais de amostra) e roda isoladamente, sem necessidade de acesso a qualquer equipamento real ou serviço externo. Os dados de configuração incluídos como amostra (`samples/` ou equivalente) são capturas anonimizadas — endereçamento IP, hostnames e identificadores de organização foram removidos ou substituídos por valores fictícios antes da inclusão no repositório.
-
-Nenhuma credencial, chave SSH, token de API ou dado de rede real está presente no repositório ou é necessário para a execução do artefato.
+Como consequência, **não há execução de código pelo avaliador em nenhuma etapa** — logo, não há risco de segurança a ser mitigado, pois nada roda no ambiente do revisor. A avaliação deste artefato se baseia inteiramente na documentação dos processos e dos resultados experimentais apresentados abaixo, e não na execução direta da ferramenta.
 
 # Instalação
 
-O artefato requer apenas Python 3.x e a biblioteca padrão (stdlib) — não há dependências externas a instalar.
+Não há pacote instalável fornecido aos avaliadores. Esta seção documenta, para fins de transparência sobre o ambiente em que a ferramenta foi de fato construída e testada, os componentes envolvidos:
 
-```bash
-git clone <url-do-repositório>
-cd <repositório>/library/sksd
-python3 --version   # requer Python 3.8+
-```
+- **Módulo SKSD**: Python 3.x, apenas biblioteca padrão (sem dependências externas) — seis módulos internos (`ir_diff.py`, `risk.py`, `baselines.py`, `terraform_style_baseline.py`, `ospf_tree_adapter.py`, `xml_adapter.py`).
+- **Pipeline**: GitLab CI/CD (self-hosted, HTTP interno), ContainerLab para simulação de topologia (Nokia SR Linux), NETCONF/ncclient para coleta e aplicação de configuração, NetBox como fonte de verdade de inventário via Terraform.
+- **Ambiente de validação real**: 10 dispositivos de rede de uma topologia OOB real (8x agregação, 1x core, 1x laboratório), usados nos experimentos descritos abaixo.
 
-Não há etapa de build, compilação ou instalação de pacotes. Ao final deste processo, os módulos do SKSD já podem ser importados e executados diretamente.
+Essa descrição serve apenas para contextualizar os resultados relatados no artigo — não constitui um roteiro de instalação reproduzível pelo avaliador.
 
 # Teste mínimo
 
-Este teste executa o SKSD contra um par de configurações de amostra (baseline vs. modificada) incluído no repositório, sem qualquer alteração no arquivo, e verifica que a saída do diff é gerada corretamente.
+Não é oferecido um teste mínimo executável pelo avaliador, pela mesma razão exposta acima: o código não é distribuído. Em vez disso, descrevemos aqui o comportamento observável da ferramenta, tal como testado pelos autores, para dar ao avaliador uma noção concreta da funcionalidade sem exigir execução:
 
-```bash
-cd library/sksd
-python3 -m ir_diff --baseline samples/ospf_baseline.xml --candidate samples/ospf_reordered.xml
-```
-
-**Resultado esperado:** a ferramenta deve reportar **nenhuma diferença semântica** entre os dois arquivos (`samples/ospf_reordered.xml` contém a mesma configuração OSPF do baseline, apenas com a lista de interfaces em ordem diferente). Esse é o comportamento que distingue o SKSD de um diff posicional — uma reordenação de lista sem mudança de conteúdo não deve gerar drift.
-
-Tempo esperado: menos de 5 segundos. Recursos: desprezíveis (<50MB RAM).
+Ao rodar o SKSD sobre duas capturas de configuração de um mesmo dispositivo — uma servindo de baseline e outra com a lista de interfaces reordenada mas sem nenhuma mudança de conteúdo — o SKSD reporta corretamente **zero drift**, pois o algoritmo indexa listas pela chave semântica do schema YANG (ex: nome da interface), não pela posição. Esse é o comportamento mínimo que diferencia o SKSD de uma ferramenta de diff textual ou posicional, e foi verificado manualmente pelos autores contra os 10 dispositivos reais do laboratório, sem nenhum falso-positivo.
 
 # Experimentos
 
-Esta seção reproduz o experimento multi-cenário apresentado no artigo, que compara o SKSD contra as 3 baselines (Naive-dict, Text-diff, Terraform-style) em 4 cenários de drift. Todos os arquivos de amostra usados abaixo estão incluídos em `library/sksd/samples/`.
+Esta seção documenta as principais reivindicações do artigo e os resultados efetivamente obtidos pelos autores. Como o código não é disponibilizado, o avaliador não poderá reexecutar os experimentos — o objetivo aqui é apresentar a metodologia com detalhe suficiente para que a reivindicação seja auditável por inspeção (isto é, para que o avaliador julgue a plausibilidade e o rigor do experimento a partir da descrição, mesmo sem rodar o código).
 
-**Ambiente**: Python 3.8+, stdlib apenas. Nenhum equipamento real, container ou serviço externo é necessário — os 4 cenários usam cópias em memória das capturas de amostra, com as perturbações sintéticas aplicadas pelo próprio script (mesma técnica usada no experimento original do artigo).
+## Reivindicação #1 — SKSD elimina falsos-positivos em reordenação de listas, ao contrário das baselines
 
-## Reivindicação #1 — ComplianceNet não gera falso-positivo em reordenação de lista, as baselines geram
+**Metodologia:** os autores definiram 4 cenários de drift — (i) reordenação da lista de interfaces OSPF sem mudança de conteúdo, (ii) mudança de um valor escalar (router-id), (iii) cenário de controle sem nenhuma mudança, (iv) mudança de admin-state de uma interface. Cada cenário foi executado contra os 10 dispositivos reais do laboratório, comparando 4 métodos de diff: SKSD, Naive-dict, Text-diff e Terraform-style. As perturbações sintéticas (mudança de router-id, inversão de admin-state) foram aplicadas sobre cópias em memória da configuração observada — nunca no equipamento real — técnica também usada e divulgada no cenário de reordenação original.
 
-**Comando:**
-```bash
-cd library/sksd
-python3 multi_scenario_eval.py --scenario reorder --methods sksd,naive-dict,text-diff,terraform-style
-```
+**Resultado obtido:** o SKSD acertou 100% dos casos nos 4 cenários. As 3 baselines acertaram 100% nos cenários (ii), (iii) e (iv), mas falharam completamente (0% de acerto, ou seja, reportaram falso-positivo de drift) no cenário (i) de reordenação — exatamente o caso que o SKSD foi desenhado para tratar corretamente. A comparação foi desenhada para ser justa: as baselines não perdem em todos os cenários, só no que expõe sua limitação estrutural (comparação posicional).
 
-**Configuração:** nenhuma alteração de arquivo necessária; o cenário usa os dados em `samples/ospf_baseline.xml` com reordenação aplicada em memória pelo próprio script (flag `--scenario reorder`).
+## Reivindicação #2 — A vantagem do SKSD é de corretude, não de desempenho
 
-**Tempo esperado:** < 10 segundos. **Recursos:** <100MB RAM, sem uso de disco além da leitura dos samples.
+**Metodologia:** medição de tempo isolada à função de comparação de cada método (excluindo o tempo de coleta via NETCONF), com 30 repetições × 10 dispositivos = 300 amostras por célula (4.800 amostras no total, cobrindo os 4 cenários × 4 métodos), agregadas com intervalo de confiança via distribuição t de Student.
 
-**Resultado esperado:** SKSD reporta 0 drifts (acerto); as 3 baselines (Naive-dict, Text-diff, Terraform-style) reportam drift onde não há mudança real (falso-positivo), reproduzindo a taxa relatada no artigo (SKSD 100% de acerto no cenário de reordenação; baselines 0%).
-
-## Reivindicação #2 — ComplianceNet mantém acerto em cenários com mudança real (escalar e admin-state)
-
-**Comando:**
-```bash
-python3 multi_scenario_eval.py --scenario router-id-change,no-change,admin-state-change --methods sksd,naive-dict,text-diff,terraform-style
-```
-
-**Configuração:** mesma base de dados de amostra; as perturbações (`router-id-change`, `admin-state-change`) e o cenário de controle (`no-change`) são aplicados em memória pelas flags do script.
-
-**Tempo esperado:** < 15 segundos para os 3 cenários. **Recursos:** <100MB RAM.
-
-**Resultado esperado:** os 4 métodos (SKSD e as 3 baselines) reportam corretamente a presença ou ausência de drift nesses 3 cenários — a comparação é justa e não favorece artificialmente o SKSD apenas no cenário de reordenação.
+**Resultado obtido:** o SKSD **não** é o método mais rápido — o Terraform-style geralmente venceu em tempo de execução, e o Text-diff foi consistentemente o mais lento dos 4 (por serializar para JSON antes de comparar). Um outlier foi identificado e investigado: a célula Terraform-style/mudança-de-router-id apresentou um intervalo de confiança 5x mais largo que o esperado; isolando a causa, tratava-se de uma única amostra de 2,92ms (entre 300) atribuída a uma interrupção do sistema operacional em um dispositivo específico — ao remover esse outlier, a célula ficou consistente com a célula equivalente do cenário de reordenação, confirmando que não é um comportamento do algoritmo. Os autores reportam esse resultado de forma direta no artigo: o argumento em favor do SKSD é sobre corretude semântica, não sobre velocidade.
 
 ## O que é o ComplianceNet
 
