@@ -1,4 +1,4 @@
-# ComplianceNet — Pipeline CI/CD para Redes OOB Multi-Vendor
+# ComplianceNet — Pipeline CI/CD para Redes
 
 > Artefato de pesquisa. Este repositório documenta a **ferramenta** (o pipeline de CI/CD e os
 > mecanismos de integração desenvolvidos pelos autores), não a réplica da infraestrutura
