@@ -6,7 +6,26 @@
 > específicos do ambiente de produção foram removidos ou substituídos por placeholders/templates.
 
 # Selos Considerados
-Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação. A estrutura desse diretório e a não reprodutibilidade da ferramenta se dão pela modalidade escolhida de código fechado, e também pelo própria natureza da ferramenta ser implementada de forma modularizada em servidor dedicado.
+Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação. A estrutura desse diretório e a não reprodutibilidade da ferramenta se dão pela modalidade escolhida de código fechado, e também pelo própria natureza da ferramenta ser implementada de forma modularizada em servidor dedicado. A resposta dos tópicos posteriores advém justamente da opção de Código fechado de submissão, e da natureza da ferramenta. Os tópicos foram redigidos para satisfazer as instruções de submissão de README do CTA.
+
+# Preocupações com segurança
+Caso a execução do artefato ofereça algum tipo de risco para os avaliadores. Este risco deve ser descrito e o processo adequado para garantir a segurança dos revisores deve ser apresentado.
+
+# Instalação
+O processo de baixar e instalar a aplicação deve ser descrito nesta seção. Ao final deste processo já é esperado que a aplicação/benchmark/ferramenta consiga ser executada.
+
+# Teste mínimo
+Esta seção deve apresentar um passo a passo para a execução de um teste mínimo. Um teste mínimo de execução permite que os revisores consigam observar algumas funcionalidades do artefato. Este teste é útil para a identificação de problemas durante o processo de instalação.
+
+# Experimentos
+
+Esta seção deve descrever um passo a passo para a execução e obtenção dos resultados do artigo. Permitindo que os revisores consigam alcançar as reivindicações apresentadas no artigo. Cada reivindicações deve ser apresentada em uma subseção, com detalhes de arquivos de configurações a serem alterados, comandos a serem executados, flags a serem utilizadas, tempo esperado de execução, expectativa de recursos a serem utilizados como 1GB RAM/Disk e resultado esperado.
+
+Caso o processo para a reprodução de todos os experimentos não seja possível em tempo viável. Os autores devem escolher as principais reivindicações apresentadas no artigo e apresentar o respectivo processo para reprodução.
+
+## Reivindicação
+A contribuição documentada neste repositório está nos **scripts de integração, configurações e mecanismos que conectam
+esses módulos** e formam o pipeline proposto
 
 ## O que é o ComplianceNet
 
