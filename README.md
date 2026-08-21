@@ -9,23 +9,70 @@
 Os autores consideram o Selo de Artefatos Disponíveis (SeloD) para a avaliação. A estrutura desse diretório e a não reprodutibilidade da ferramenta se dão pela modalidade escolhida de código fechado, e também pelo própria natureza da ferramenta ser implementada de forma modularizada em servidor dedicado. A resposta dos tópicos posteriores advém justamente da opção de Código fechado de submissão, e da natureza da ferramenta. Os tópicos foram redigidos para satisfazer as instruções de submissão de README do CTA.
 
 # Preocupações com segurança
-Caso a execução do artefato ofereça algum tipo de risco para os avaliadores. Este risco deve ser descrito e o processo adequado para garantir a segurança dos revisores deve ser apresentado.
+
+O artefato disponibilizado neste repositório é restrito ao módulo SKSD (`library/sksd/`) e ao harness de avaliação com dados de amostra sintéticos/anonimizados. **O pipeline CI/CD completo, a topologia de rede real, credenciais de acesso a equipamentos e a instância de GitLab utilizada em produção não fazem parte deste artefato e não estão disponíveis no repositório.**
+
+Não há risco de execução para os avaliadores: o código do SKSD é Python puro (stdlib apenas, sem chamadas de rede, sem I/O além de leitura de arquivos locais de amostra) e roda isoladamente, sem necessidade de acesso a qualquer equipamento real ou serviço externo. Os dados de configuração incluídos como amostra (`samples/` ou equivalente) são capturas anonimizadas — endereçamento IP, hostnames e identificadores de organização foram removidos ou substituídos por valores fictícios antes da inclusão no repositório.
+
+Nenhuma credencial, chave SSH, token de API ou dado de rede real está presente no repositório ou é necessário para a execução do artefato.
 
 # Instalação
-O processo de baixar e instalar a aplicação deve ser descrito nesta seção. Ao final deste processo já é esperado que a aplicação/benchmark/ferramenta consiga ser executada.
+
+O artefato requer apenas Python 3.x e a biblioteca padrão (stdlib) — não há dependências externas a instalar.
+
+```bash
+git clone <url-do-repositório>
+cd <repositório>/library/sksd
+python3 --version   # requer Python 3.8+
+```
+
+Não há etapa de build, compilação ou instalação de pacotes. Ao final deste processo, os módulos do SKSD já podem ser importados e executados diretamente.
 
 # Teste mínimo
-Esta seção deve apresentar um passo a passo para a execução de um teste mínimo. Um teste mínimo de execução permite que os revisores consigam observar algumas funcionalidades do artefato. Este teste é útil para a identificação de problemas durante o processo de instalação.
+
+Este teste executa o SKSD contra um par de configurações de amostra (baseline vs. modificada) incluído no repositório, sem qualquer alteração no arquivo, e verifica que a saída do diff é gerada corretamente.
+
+```bash
+cd library/sksd
+python3 -m ir_diff --baseline samples/ospf_baseline.xml --candidate samples/ospf_reordered.xml
+```
+
+**Resultado esperado:** a ferramenta deve reportar **nenhuma diferença semântica** entre os dois arquivos (`samples/ospf_reordered.xml` contém a mesma configuração OSPF do baseline, apenas com a lista de interfaces em ordem diferente). Esse é o comportamento que distingue o SKSD de um diff posicional — uma reordenação de lista sem mudança de conteúdo não deve gerar drift.
+
+Tempo esperado: menos de 5 segundos. Recursos: desprezíveis (<50MB RAM).
 
 # Experimentos
 
-Esta seção deve descrever um passo a passo para a execução e obtenção dos resultados do artigo. Permitindo que os revisores consigam alcançar as reivindicações apresentadas no artigo. Cada reivindicações deve ser apresentada em uma subseção, com detalhes de arquivos de configurações a serem alterados, comandos a serem executados, flags a serem utilizadas, tempo esperado de execução, expectativa de recursos a serem utilizados como 1GB RAM/Disk e resultado esperado.
+Esta seção reproduz o experimento multi-cenário apresentado no artigo, que compara o SKSD contra as 3 baselines (Naive-dict, Text-diff, Terraform-style) em 4 cenários de drift. Todos os arquivos de amostra usados abaixo estão incluídos em `library/sksd/samples/`.
 
-Caso o processo para a reprodução de todos os experimentos não seja possível em tempo viável. Os autores devem escolher as principais reivindicações apresentadas no artigo e apresentar o respectivo processo para reprodução.
+**Ambiente**: Python 3.8+, stdlib apenas. Nenhum equipamento real, container ou serviço externo é necessário — os 4 cenários usam cópias em memória das capturas de amostra, com as perturbações sintéticas aplicadas pelo próprio script (mesma técnica usada no experimento original do artigo).
 
-## Reivindicação
-A contribuição documentada neste repositório está nos **scripts de integração, configurações e mecanismos que conectam
-esses módulos** e formam o pipeline proposto
+## Reivindicação #1 — ComplianceNet não gera falso-positivo em reordenação de lista, as baselines geram
+
+**Comando:**
+```bash
+cd library/sksd
+python3 multi_scenario_eval.py --scenario reorder --methods sksd,naive-dict,text-diff,terraform-style
+```
+
+**Configuração:** nenhuma alteração de arquivo necessária; o cenário usa os dados em `samples/ospf_baseline.xml` com reordenação aplicada em memória pelo próprio script (flag `--scenario reorder`).
+
+**Tempo esperado:** < 10 segundos. **Recursos:** <100MB RAM, sem uso de disco além da leitura dos samples.
+
+**Resultado esperado:** SKSD reporta 0 drifts (acerto); as 3 baselines (Naive-dict, Text-diff, Terraform-style) reportam drift onde não há mudança real (falso-positivo), reproduzindo a taxa relatada no artigo (SKSD 100% de acerto no cenário de reordenação; baselines 0%).
+
+## Reivindicação #2 — ComplianceNet mantém acerto em cenários com mudança real (escalar e admin-state)
+
+**Comando:**
+```bash
+python3 multi_scenario_eval.py --scenario router-id-change,no-change,admin-state-change --methods sksd,naive-dict,text-diff,terraform-style
+```
+
+**Configuração:** mesma base de dados de amostra; as perturbações (`router-id-change`, `admin-state-change`) e o cenário de controle (`no-change`) são aplicados em memória pelas flags do script.
+
+**Tempo esperado:** < 15 segundos para os 3 cenários. **Recursos:** <100MB RAM.
+
+**Resultado esperado:** os 4 métodos (SKSD e as 3 baselines) reportam corretamente a presença ou ausência de drift nesses 3 cenários — a comparação é justa e não favorece artificialmente o SKSD apenas no cenário de reordenação.
 
 ## O que é o ComplianceNet
 
